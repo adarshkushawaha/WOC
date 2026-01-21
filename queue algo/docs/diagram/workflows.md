@@ -48,7 +48,7 @@ graph TD
     B --> C[Set Bit = 1]
     D[Worker Available] --> E[TrailingZeros Search]
     C -->|Lowest Set Bit| E
-    E --> F[Match O(1)]
+    E --> F[Match 1]
 ```
 
 ## Algo 5: Tiered Bitmask
