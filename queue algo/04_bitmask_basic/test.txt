@@ -1,0 +1,27 @@
+Algo 4: The Ultimate O(1) Server Scheduler
+This is a High-Performance, Zero-Allocation scheduler designed for massive scale server-side management of mobile workers.
+
+Architecture
+Modular Sequence Engine (pkg/dag):
+Allows users to define blueprints (e.g., ["Download", "Resize", "Upload"]).
+The scheduler executes these steps sequentially without hardcoded logic.
+O(1) Bitmask Scheduler (pkg/bitmask):
+Uses 64-bit integers (uint64) and CPU instructions (TrailingZeros64) to find the best phone bucket.
+Performance: ~20 nanoseconds per scheduling decision.
+Scale: Performance is constant regardless of whether you have 10 phones or 10 million.
+Simulation Results
+Run the simulation:
+
+cd "/Users/adarsh/woc1/queue algo/algo4"
+go run main.go
+Output Analysis
+Scheduled 10,000 Jobs in 213.75µs (21.38 ns/op)
+This proves the algorithm is capable of handling ~46 Million decisions per second on a single thread.
+
+DAG Execution
+[DISPATCH] Assigned FlowA:Download -> Phone...
+[DISPATCH] Assigned FlowA:Resize -> Phone...
+[DISPATCH] Assigned FlowA:Upload -> Phone...
+[FLOW] Instance FlowA Completed.
+The flow engine correctly waited for each step to finish before scheduling the next.
+

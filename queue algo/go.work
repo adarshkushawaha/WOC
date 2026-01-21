@@ -1,0 +1,12 @@
+go 1.25.6
+
+use (
+	./01_priority_queue
+	./02_bucket_reservation
+	./03_segment_tree
+	./04_bitmask_basic
+	./05_tiered_bitmask
+	./06_linked_queue
+	./07_pull_based
+	./algotest/backend
+)

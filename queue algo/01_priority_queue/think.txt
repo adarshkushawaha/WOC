@@ -1,0 +1,57 @@
+
+
+This algorithm is a great foundation, but like any architectural pattern, it has specific limits regarding performance, scalability, and logical consistency.
+
+Here are the primary limits of the current implementation:
+
+1. The "Stale Heap" Problem (Logical Limit)
+This is the most critical limit. In Go's container/heap, the heap is only ordered when you call 
+Push
+, 
+Pop
+, or Fix.
+
+The Issue: Your 
+Score()
+ function depends on time.Since(ArrivalTime). As time passes, every job's score increases. If Job A's score increases faster than Job B's (due to weights), their relative order in the heap might change while they are just sitting there.
+The Impact: The generic heap won't know the order changed. You might call 
+Pop()
+ and get the "old" best job instead of the actual current best job.
+The Limit: This algorithm is only accurate if Fix() is called frequently or if the scoring logic doesn't allow for "priority jumping" over time.
+2. Linear Search Bottleneck (Performance Limit)
+In the current Dispatcher.removeFromOtherJobQueues implementation, we find the job in the secondary queues using a linear for-loop:
+
+go
+for i := 0; i < d.TimeJobQueue.Len(); i++ {
+    if d.TimeJobQueue.BaseJobQueue[i].Job.ID == target.ID { ... }
+}
+Complexity: This makes the 
+Match()
+ operation $O(N)$, where $N$ is the number of pending jobs.
+The Limit: If you have 100,000 jobs in the queue, matching a single pair will require scanning through lists of 100,000 items multiple times. This will significantly slow down the system at high volumes.
+3. Non-Thread Safety (Concurrency Limit)
+The current 
+Dispatcher
+ does not use any Locking mechanisms (sync.Mutex).
+
+The Issue: If one part of your program adds a job while another part is trying to 
+Match()
+, the underlying slices will be modified simultaneously.
+The Impact: This will cause the program to crash with a "slice out of bounds" or "concurrent map write" error.
+The Limit: The current code is limited to single-threaded execution.
+4. Memory Overhead
+Because every Job and Worker is stored in 3 separate queues simultaneously:
+
+Complexity: Memory usage is $3 \times N$.
+The Limit: While pointers are small, at extreme scales (millions of jobs), maintaining three redundant heap structures consumes significantly more memory and increases Garbage Collection (GC) pressure compared to a single optimized queue.
+5. Lack of Persistence
+The algorithm lives entirely in RAM.
+
+The Issue: If the service restarts or crashes, all jobs in the queues are lost instantly.
+The Limit: It is not suitable for "Mission Critical" tasks where jobs must survive a system failure unless backed by a database or a message broker (like RabbitMQ or Redis).
+How to overcome these limits?
+For Performance: Use a Map[JobID]int to store the current index of each job in each heap. This allows heap.Remove to work in $O(\log N)$ instead of $O(N)$.
+For Accuracy: Periodically call heap.Init or loop through and call heap.Fix on all items to re-sort the dynamic scores.
+For Concurrency: Wrap the 
+Dispatcher
+ methods in mu.Lock() and mu.Unlock().
